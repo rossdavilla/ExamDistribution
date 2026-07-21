@@ -1,0 +1,735 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Exam Grade Distribution</title>
+<style>
+  /* ---------- Design tokens (light) ---------- */
+  :root {
+    --surface-1: #fcfcfb;   /* chart / card surface */
+    --page:      #f4f4f1;   /* app background */
+    --panel:     #ffffff;   /* control panel */
+    --text-primary:   #0b0b0b;
+    --text-secondary: #52514e;
+    --muted:          #6e6c67;
+    --grid:      #e6e5df;
+    --axis:      #c3c2b7;
+    --border:    rgba(11,11,11,0.10);
+    --border-strong: rgba(11,11,11,0.16);
+    --series-original: #2a78d6;  /* blue  */
+    --series-curved:   #12a37a;  /* teal-green */
+    --accent:    #2a78d6;
+    --shadow: 0 1px 2px rgba(11,11,11,.05), 0 4px 16px rgba(11,11,11,.06);
+    --radius: 12px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --surface-1: #1a1a19;
+      --page:      #0d0d0d;
+      --panel:     #171716;
+      --text-primary:   #ffffff;
+      --text-secondary: #c3c2b7;
+      --muted:          #a3a29b;
+      --grid:      #2c2c2a;
+      --axis:      #3a3a37;
+      --border:    rgba(255,255,255,0.12);
+      --border-strong: rgba(255,255,255,0.18);
+      --series-original: #3987e5;
+      --series-curved:   #16b98a;
+      --accent:    #3987e5;
+      --shadow: 0 1px 2px rgba(0,0,0,.4), 0 4px 20px rgba(0,0,0,.5);
+    }
+  }
+
+  * { box-sizing: border-box; }
+  html, body { margin: 0; padding: 0; }
+  body {
+    font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    background: var(--page);
+    color: var(--text-primary);
+    -webkit-font-smoothing: antialiased;
+    line-height: 1.45;
+  }
+
+  .app { max-width: 1240px; margin: 0 auto; padding: 28px 32px 64px; }
+
+  header.masthead { margin-bottom: 22px; }
+  header.masthead h1 {
+    font-size: 24px; font-weight: 650; letter-spacing: -0.01em; margin: 0;
+  }
+  header.masthead p { margin: 4px 0 0; color: var(--text-secondary); font-size: 14px; }
+
+  /* ---------- Layout ---------- */
+  .grid { display: grid; grid-template-columns: 340px 1fr; gap: 24px; align-items: start; }
+  @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
+
+  /* ---------- Control panel ---------- */
+  .panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    padding: 20px;
+    position: sticky; top: 20px;
+  }
+  .field { margin-bottom: 16px; }
+  .field:last-child { margin-bottom: 0; }
+  .field label {
+    display: block; font-size: 12.5px; font-weight: 600; letter-spacing: .01em;
+    color: var(--text-secondary); margin-bottom: 6px;
+  }
+  .field .hint { font-weight: 400; color: var(--muted); font-size: 11.5px; }
+  input[type="text"], input[type="number"], input[type="date"], textarea {
+    width: 100%; font: inherit; color: var(--text-primary);
+    background: var(--surface-1);
+    border: 1px solid var(--border-strong); border-radius: 8px;
+    padding: 9px 11px; outline: none;
+    transition: border-color .12s, box-shadow .12s;
+  }
+  input:focus, textarea:focus {
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  button.primary:focus-visible, .linkbtn:focus-visible {
+    outline: 2px solid var(--text-primary); outline-offset: 2px; border-radius: 6px;
+  }
+  .sr-only {
+    position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+    overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+  textarea {
+    min-height: 200px; resize: vertical; font-variant-numeric: tabular-nums;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; line-height: 1.5;
+  }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .curve-effect { font-size: 11.5px; color: var(--muted); margin-top: 6px; min-height: 1.2em; }
+
+  .btnrow { display: flex; gap: 10px; margin-top: 4px; }
+  .linkbtn {
+    background: none; border: none; padding: 0; color: var(--accent);
+    font: inherit; font-size: 12.5px; cursor: pointer; text-decoration: underline;
+    text-underline-offset: 2px;
+  }
+  .linkbtn:hover { opacity: .8; }
+
+  button.primary {
+    font: inherit; font-weight: 600; font-size: 14px;
+    color: #fff; background: var(--accent);
+    border: none; border-radius: 9px; padding: 11px 16px; cursor: pointer;
+    width: 100%; display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    transition: filter .12s, transform .04s;
+  }
+  button.primary:hover { filter: brightness(1.05); }
+  button.primary:active { transform: translateY(1px); }
+  button.primary svg { width: 16px; height: 16px; }
+  .print-hint { font-size: 11.5px; color: var(--muted); margin-top: 8px; text-align: center; }
+
+  .warn {
+    margin-top: 10px; font-size: 12px; color: #a6520f;
+    background: color-mix(in srgb, #eb6834 12%, transparent);
+    border: 1px solid color-mix(in srgb, #eb6834 30%, transparent);
+    border-radius: 8px; padding: 8px 10px; display: none;
+  }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) .warn { color: #f0a06a; } }
+
+  /* ---------- Results ---------- */
+  .results { display: flex; flex-direction: column; gap: 20px; }
+
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; }
+  @media (max-width: 1080px) { .stats { grid-template-columns: repeat(2, 1fr); } }
+  .stat {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px 16px; box-shadow: var(--shadow);
+  }
+  .stat .k { font-size: 12px; color: var(--text-secondary); font-weight: 500; }
+  .stat .v { font-size: 26px; font-weight: 650; letter-spacing: -0.02em; margin-top: 4px; }
+  .stat .v small { font-size: 14px; font-weight: 500; color: var(--muted); }
+  .stat.curved .v { color: var(--series-curved); }
+
+  .charts { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  @media (max-width: 1080px) { .charts { grid-template-columns: 1fr; } }
+  .chartcard {
+    background: var(--surface-1); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 18px 18px 12px; box-shadow: var(--shadow);
+  }
+  .chartcard h2 { font-size: 15px; font-weight: 640; margin: 0 0 2px; }
+  .chartcard .sub { font-size: 12.5px; color: var(--text-secondary); margin: 0 0 8px; }
+  .chartcard svg { width: 100%; height: auto; display: block; }
+
+  .empty {
+    background: var(--surface-1); border: 1px dashed var(--border-strong);
+    border-radius: var(--radius); padding: 48px 24px; text-align: center; color: var(--muted);
+    font-size: 14px;
+  }
+
+  /* Grade breakdown table */
+  .breakdown { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 4px; }
+  .breakdown th, .breakdown td { text-align: right; padding: 6px 10px; border-bottom: 1px solid var(--grid); }
+  .breakdown th:first-child, .breakdown td:first-child { text-align: left; }
+  .breakdown thead th { color: var(--text-secondary); font-weight: 600; font-size: 12px; }
+  .breakdown td { font-variant-numeric: tabular-nums; }
+  .breakdown tfoot td { font-weight: 650; border-bottom: none; }
+  .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
+
+  /* ---------- Tooltip ---------- */
+  .tooltip {
+    position: fixed; pointer-events: none; z-index: 50;
+    background: var(--text-primary); color: var(--surface-1);
+    font-size: 12px; padding: 6px 9px; border-radius: 7px; box-shadow: var(--shadow);
+    opacity: 0; transform: translateY(2px); transition: opacity .1s;
+    white-space: nowrap;
+  }
+  .tooltip.on { opacity: 1; transform: none; }
+
+  /* ---------- Print report (hidden on screen) ---------- */
+  .report { display: none; }
+
+  @media print {
+    @page { size: landscape; margin: 0.55in; }
+    body { background: #fff; color: #000; }
+    .app { display: none !important; }
+    .tooltip { display: none !important; }
+    .report {
+      display: block; color: #000;
+      font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .report .r-title { text-align: center; margin-bottom: 4px; }
+    .report .r-title h1 { font-size: 30px; font-weight: 650; margin: 0; letter-spacing: -0.01em; }
+    .report .r-meta { text-align: center; font-size: 15px; color: #333; margin: 6px 0 22px; }
+    .report .r-meta .dot { margin: 0 10px; color: #aaa; }
+    .report .r-body { display: flex; align-items: center; gap: 40px; padding: 0 12px; }
+    .report .r-stats { flex: 0 0 250px; }
+    .report .r-stat { margin-bottom: 22px; }
+    .report .r-stat .k { font-size: 14px; color: #444; text-transform: uppercase; letter-spacing: .06em; }
+    .report .r-stat .v { font-size: 40px; font-weight: 650; letter-spacing: -0.02em; margin-top: 2px; color: #000; }
+    .report .r-stat .v small { font-size: 18px; font-weight: 500; color: #666; }
+    .report .r-stat.sub .v { font-size: 22px; }
+    .report .r-chart { flex: 1 1 auto; }
+    .report .r-chart svg { width: 100%; height: auto; }
+    .report .r-foot { text-align: center; font-size: 11px; color: #999; margin-top: 20px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header class="masthead">
+    <h1>Exam Grade Distribution</h1>
+    <p>Paste raw scores, see the grade breakdown, apply a curve, and print a clean report to PDF.</p>
+  </header>
+
+  <div class="grid">
+    <!-- ============ CONTROLS ============ -->
+    <form class="panel" id="controls" autocomplete="off" onsubmit="return false">
+      <div class="field">
+        <label for="course">Course number</label>
+        <input type="text" id="course" placeholder="e.g. CHEM 101" />
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="exam">Exam name <span class="hint">(optional)</span></label>
+          <input type="text" id="exam" placeholder="e.g. Exam 3" />
+        </div>
+        <div class="field">
+          <label for="date">Date</label>
+          <input type="date" id="date" />
+        </div>
+      </div>
+
+      <div class="row2">
+        <div class="field">
+          <label for="total">Total exam items</label>
+          <input type="number" id="total" min="1" step="1" placeholder="e.g. 50" />
+        </div>
+        <div class="field">
+          <label for="curve">Curve <span class="hint">(+points)</span></label>
+          <input type="number" id="curve" step="1" value="0" />
+        </div>
+      </div>
+      <div class="curve-effect" id="curveEffect" aria-live="polite"></div>
+
+      <div class="field">
+        <label for="scores">Raw scores <span class="hint">(one per line — paste a column from Excel)</span></label>
+        <textarea id="scores" placeholder="38&#10;42&#10;29&#10;45&#10;..."></textarea>
+        <div class="btnrow">
+          <button type="button" class="linkbtn" id="exampleBtn">Load example</button>
+          <button type="button" class="linkbtn" id="clearBtn">Clear</button>
+        </div>
+      </div>
+
+      <div class="warn" id="warn" role="status" aria-live="polite"></div>
+
+      <div class="field" style="margin-top:18px">
+        <button type="button" class="primary" id="printBtn">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+          Print / Save as PDF
+        </button>
+        <div class="print-hint">In the print dialog, choose destination “Save as PDF”.</div>
+      </div>
+    </form>
+
+    <!-- ============ RESULTS ============ -->
+    <section class="results" id="results">
+      <div class="empty" id="empty">Enter the total exam items and paste your scores to see the distribution.</div>
+
+      <div class="stats" id="statsRow" style="display:none">
+        <div class="stat"><div class="k">Students</div><div class="v" id="stN">—</div></div>
+        <div class="stat"><div class="k">Median (raw)</div><div class="v" id="stMedRaw">—</div></div>
+        <div class="stat curved"><div class="k">Median (curved)</div><div class="v" id="stMedCurved">—</div></div>
+        <div class="stat"><div class="k">Mean (curved)</div><div class="v" id="stMeanCurved">—</div></div>
+      </div>
+
+      <div class="charts" id="chartsRow" style="display:none">
+        <div class="chartcard">
+          <h2>Original distribution</h2>
+          <p class="sub" id="subOriginal">&nbsp;</p>
+          <div id="chartOriginal"></div>
+        </div>
+        <div class="chartcard">
+          <h2>Curved distribution</h2>
+          <p class="sub" id="subCurved">&nbsp;</p>
+          <div id="chartCurved"></div>
+        </div>
+      </div>
+
+      <div class="chartcard" id="breakdownCard" style="display:none">
+        <h2 style="margin-bottom:8px">Grade breakdown</h2>
+        <table class="breakdown" id="breakdownTable"></table>
+      </div>
+    </section>
+  </div>
+</div>
+
+<!-- ============ PRINT-ONLY REPORT ============ -->
+<div class="report" id="report" aria-hidden="true">
+  <div class="r-title"><h1 id="rTitle"></h1></div>
+  <div class="r-meta" id="rMeta"></div>
+  <div class="r-body">
+    <div class="r-stats" id="rStats"></div>
+    <div class="r-chart" id="rChart"></div>
+  </div>
+  <div class="r-foot" id="rFoot"></div>
+</div>
+
+<div class="tooltip" id="tooltip"></div>
+
+<script>
+"use strict";
+(function () {
+  // ---------------------------------------------------------------- constants
+  var GRADES = ["F", "D", "C", "B", "A"];           // x-axis order (low -> high)
+  var CUTOFFS = { A: 90, B: 80, C: 70, D: 60 };     // F is < 60
+
+  // ---------------------------------------------------------------- elements
+  var $ = function (id) { return document.getElementById(id); };
+  var els = {
+    course: $("course"), exam: $("exam"), date: $("date"),
+    total: $("total"), curve: $("curve"), scores: $("scores"),
+    curveEffect: $("curveEffect"), warn: $("warn"),
+    empty: $("empty"), statsRow: $("statsRow"), chartsRow: $("chartsRow"),
+    breakdownCard: $("breakdownCard"), breakdownTable: $("breakdownTable"),
+    stN: $("stN"), stMedRaw: $("stMedRaw"), stMedCurved: $("stMedCurved"), stMeanCurved: $("stMeanCurved"),
+    subOriginal: $("subOriginal"), subCurved: $("subCurved"),
+    chartOriginal: $("chartOriginal"), chartCurved: $("chartCurved"),
+    tooltip: $("tooltip"),
+    rTitle: $("rTitle"), rMeta: $("rMeta"), rStats: $("rStats"), rChart: $("rChart"), rFoot: $("rFoot")
+  };
+
+  // ---------------------------------------------------------------- helpers
+  function gradeOf(pct) {
+    if (pct >= CUTOFFS.A) return "A";
+    if (pct >= CUTOFFS.B) return "B";
+    if (pct >= CUTOFFS.C) return "C";
+    if (pct >= CUTOFFS.D) return "D";
+    return "F";
+  }
+
+  function median(arr) {
+    if (!arr.length) return NaN;
+    var s = arr.slice().sort(function (a, b) { return a - b; });
+    var m = Math.floor(s.length / 2);
+    return s.length % 2 ? s[m] : (s[m - 1] + s[m]) / 2;
+  }
+  function mean(arr) {
+    if (!arr.length) return NaN;
+    var t = 0; for (var i = 0; i < arr.length; i++) t += arr[i];
+    return t / arr.length;
+  }
+
+  // round to 0.1, drop trailing .0
+  function fmtPct(x) {
+    if (!isFinite(x)) return "—";
+    var r = Math.round(x * 10) / 10;
+    return (Number.isInteger(r) ? r.toFixed(0) : r.toFixed(1)) + "%";
+  }
+  function fmtNum(x) {
+    if (!isFinite(x)) return "—";
+    var r = Math.round(x * 10) / 10;
+    return Number.isInteger(r) ? r.toFixed(0) : r.toFixed(1);
+  }
+  function esc(s) {
+    return String(s).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  // Parse pasted scores: split on whitespace / comma / semicolon, keep plain
+  // decimal numbers only (so stray cells like "0x20" or "1e3" are flagged, not
+  // silently counted).
+  var DECIMAL_RE = /^[+-]?(\d+\.?\d*|\.\d+)$/;
+  function parseScores(text) {
+    var tokens = String(text).split(/[\s,;]+/);
+    var vals = [], ignored = 0;
+    for (var i = 0; i < tokens.length; i++) {
+      var t = tokens[i].trim();
+      if (t === "") continue;
+      if (DECIMAL_RE.test(t) && isFinite(Number(t))) vals.push(Number(t)); else ignored++;
+    }
+    return { vals: vals, ignored: ignored };
+  }
+
+  // Build a distribution from raw scores + curve.
+  function computeDist(rawScores, total, curve) {
+    var counts = { A: 0, B: 0, C: 0, D: 0, F: 0 };
+    var pcts = [];
+    for (var i = 0; i < rawScores.length; i++) {
+      var s = rawScores[i];
+      var cr = s + curve;                       // apply curve (raw points)
+      if (cr < 0) cr = 0;
+      var cap = Math.max(total, s);             // don't lower a score already above the max
+      if (cr > cap) cr = cap;                   // cap at 100% (= total items)
+      var pct = (cr / total) * 100;
+      pcts.push(pct);
+      counts[gradeOf(pct)]++;
+    }
+    var n = rawScores.length;
+    return {
+      counts: counts,
+      pcts: pcts,
+      n: n,
+      median: median(pcts),
+      mean: mean(pcts),
+      // percent-of-students per grade
+      share: GRADES.reduce(function (o, g) { o[g] = n ? (counts[g] / n) * 100 : 0; return o; }, {})
+    };
+  }
+
+  function niceCeil(pct) {
+    var p = pct * 1.14 + 0.001;                 // headroom for cap labels
+    var step = p <= 50 ? 10 : 20;
+    var top = Math.ceil(p / step) * step;
+    return Math.min(100, Math.max(step, top));  // a share axis never exceeds 100%
+  }
+
+  // ---------------------------------------------------------------- chart
+  // Draw a column chart of grade shares (percent of students) into `hostEl`.
+  // opts: { hue, yMax, forPrint }
+  function drawChart(hostEl, dist, opts) {
+    opts = opts || {};
+    var hue = opts.hue || "#2a78d6";
+    var W = 540, H = 400;
+    var mL = 62, mR = 22, mT = 30, mB = 54;
+    var x0 = mL, x1 = W - mR, y0 = mT, y1 = H - mB;
+    var plotW = x1 - x0, plotH = y1 - y0;
+    var band = plotW / GRADES.length;
+    var barW = Math.min(58, band * 0.6);
+    var yMax = opts.yMax || niceCeil(Math.max.apply(null, GRADES.map(function (g) { return dist.share[g]; }).concat([1])));
+    var step = yMax <= 50 ? 10 : 20;
+
+    var ink = "var(--text-primary)", ink2 = "var(--text-secondary)", muted = "var(--muted)",
+        grid = "var(--grid)", axis = "var(--axis)";
+    if (opts.forPrint) { ink = "#000"; ink2 = "#333"; muted = "#666"; grid = "#e2e2dc"; axis = "#bdbdb5"; hue = opts.hue; }
+
+    function yOf(v) { return y1 - (v / yMax) * plotH; }
+
+    var ariaLabel = "Grade distribution: " + GRADES.slice().reverse().map(function (gg) {
+      return dist.counts[gg] + " " + gg + " (" + fmtPct(dist.share[gg]) + ")";
+    }).join(", ");
+
+    var svg = [];
+    svg.push('<svg viewBox="0 0 ' + W + ' ' + H + '" role="img" aria-label="' + esc(ariaLabel) + '" xmlns="http://www.w3.org/2000/svg">');
+
+    // gridlines + y ticks
+    for (var v = 0; v <= yMax + 0.001; v += step) {
+      var yy = yOf(v);
+      svg.push('<line x1="' + x0 + '" y1="' + yy.toFixed(1) + '" x2="' + x1 + '" y2="' + yy.toFixed(1) +
+               '" stroke="' + grid + '" stroke-width="1" />');
+      svg.push('<text x="' + (x0 - 10) + '" y="' + (yy + 4).toFixed(1) + '" text-anchor="end" ' +
+               'font-size="12" fill="' + ink2 + '" style="font-variant-numeric:tabular-nums">' + v + '%</text>');
+    }
+    // baseline
+    svg.push('<line x1="' + x0 + '" y1="' + y1 + '" x2="' + x1 + '" y2="' + y1 + '" stroke="' + axis + '" stroke-width="1.5" />');
+
+    // y-axis title
+    svg.push('<text transform="translate(16,' + ((y0 + y1) / 2) + ') rotate(-90)" text-anchor="middle" ' +
+             'font-size="12.5" font-weight="600" fill="' + ink2 + '">Percent of students</text>');
+
+    // bars
+    for (var i = 0; i < GRADES.length; i++) {
+      var g = GRADES[i];
+      var share = dist.share[g];
+      var count = dist.counts[g];
+      var cx = x0 + band * i + band / 2;
+      var bx = cx - barW / 2;
+
+      if (count > 0) {
+        // draw the bar at least 2px tall so a nonzero grade is never invisible
+        var bH = Math.max(y1 - yOf(share), 2);
+        var bTop = y1 - bH;
+        var r = Math.min(4, barW / 2, bH);
+        var p = "M" + bx + "," + y1 +
+                " L" + bx + "," + (bTop + r).toFixed(1) +
+                " Q" + bx + "," + bTop.toFixed(1) + " " + (bx + r).toFixed(1) + "," + bTop.toFixed(1) +
+                " L" + (bx + barW - r).toFixed(1) + "," + bTop.toFixed(1) +
+                " Q" + (bx + barW) + "," + bTop.toFixed(1) + " " + (bx + barW) + "," + (bTop + r).toFixed(1) +
+                " L" + (bx + barW) + "," + y1 + " Z";
+        svg.push('<path class="bar" d="' + p + '" fill="' + hue + '" ' +
+                 'data-g="' + g + '" data-count="' + count + '" data-share="' + share.toFixed(4) + '">' +
+                 '<title>Grade ' + g + ': ' + count + (count === 1 ? " student" : " students") + ' (' + fmtPct(share) + ')</title></path>');
+        // cap label: number of students (always the true count, even for a tiny bar)
+        var ly = Math.min(bTop - 8, y1 - 8);
+        svg.push('<text x="' + cx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" ' +
+                 'font-size="13.5" font-weight="650" fill="' + ink + '" style="font-variant-numeric:tabular-nums">' + count + '</text>');
+      } else {
+        // zero-count grade: faint 0 on the baseline
+        svg.push('<text x="' + cx.toFixed(1) + '" y="' + (y1 - 6) + '" text-anchor="middle" font-size="12" fill="' + muted + '">0</text>');
+      }
+
+      // x-axis grade letter
+      svg.push('<text x="' + cx.toFixed(1) + '" y="' + (y1 + 22) + '" text-anchor="middle" ' +
+               'font-size="15" font-weight="600" fill="' + ink + '">' + g + '</text>');
+    }
+
+    // x-axis title
+    svg.push('<text x="' + ((x0 + x1) / 2) + '" y="' + (H - 6) + '" text-anchor="middle" ' +
+             'font-size="12.5" font-weight="600" fill="' + ink2 + '">Grade</text>');
+
+    svg.push("</svg>");
+    hostEl.innerHTML = svg.join("");
+    if (!opts.forPrint) attachTooltips(hostEl);
+  }
+
+  // ---------------------------------------------------------------- tooltip
+  function attachTooltips(hostEl) {
+    var bars = hostEl.querySelectorAll(".bar");
+    for (var i = 0; i < bars.length; i++) {
+      bars[i].style.cursor = "default";
+      bars[i].addEventListener("mouseenter", onEnter);
+      bars[i].addEventListener("mousemove", onMove);
+      bars[i].addEventListener("mouseleave", onLeave);
+    }
+  }
+  function onEnter(e) {
+    var b = e.currentTarget;
+    var g = b.getAttribute("data-g");
+    var c = +b.getAttribute("data-count");
+    var s = +b.getAttribute("data-share");
+    els.tooltip.textContent = "Grade " + g + " — " + c + (c === 1 ? " student " : " students ") + "(" + fmtPct(s) + ")";
+    els.tooltip.classList.add("on");
+    b.setAttribute("fill-opacity", "0.85");
+  }
+  function onMove(e) {
+    els.tooltip.style.left = (e.clientX + 14) + "px";
+    els.tooltip.style.top = (e.clientY - 10) + "px";
+  }
+  function onLeave(e) {
+    els.tooltip.classList.remove("on");
+    e.currentTarget.removeAttribute("fill-opacity");
+  }
+
+  // ---------------------------------------------------------------- date
+  function todayISO() {
+    var d = new Date();
+    var mm = String(d.getMonth() + 1).padStart(2, "0");
+    var dd = String(d.getDate()).padStart(2, "0");
+    return d.getFullYear() + "-" + mm + "-" + dd;
+  }
+  function prettyDate(iso) {
+    if (!iso) return "";
+    var parts = iso.split("-");
+    if (parts.length !== 3) return iso;
+    var d = new Date(+parts[0], +parts[1] - 1, +parts[2]);
+    if (isNaN(d.getTime())) return iso;
+    return d.toLocaleDateString(undefined, { year: "numeric", month: "long", day: "numeric" });
+  }
+
+  // ---------------------------------------------------------------- render
+  var reportReady = false;
+  function render() {
+    var total = parseInt(els.total.value, 10);
+    var curve = parseFloat(els.curve.value);
+    if (!isFinite(curve)) curve = 0;
+    var curveSign = curve < 0 ? "" : "+";   // fmtNum already prints the minus for negatives
+    var parsed = parseScores(els.scores.value);
+    var scores = parsed.vals;
+
+    // curve effect note
+    if (isFinite(total) && total > 0 && curve) {
+      els.curveEffect.textContent = curveSign + fmtNum(curve) + " point" + (Math.abs(curve) === 1 ? "" : "s") +
+        " ≈ " + curveSign + fmtNum((curve / total) * 100) + " percentage points";
+    } else {
+      els.curveEffect.textContent = "";
+    }
+
+    // warnings
+    var warnMsgs = [];
+    if (parsed.ignored > 0) warnMsgs.push(parsed.ignored + " non-numeric value" + (parsed.ignored === 1 ? "" : "s") + " ignored.");
+    if (scores.length && isFinite(total) && total > 0) {
+      var over = scores.filter(function (s) { return s > total; }).length;
+      if (over > 0) warnMsgs.push(over + " raw score" + (over === 1 ? "" : "s") + " above the total of " + total + " item" + (total === 1 ? "" : "s") + ".");
+    }
+    var under = scores.filter(function (s) { return s < 0; }).length;
+    if (under > 0) warnMsgs.push(under + " negative raw score" + (under === 1 ? "" : "s") + " treated as 0.");
+
+    var ready = isFinite(total) && total > 0 && scores.length > 0;
+
+    if (!ready) {
+      els.empty.style.display = "";
+      els.empty.textContent = !scores.length
+        ? "Enter the total exam items and paste your scores to see the distribution."
+        : "Enter the total number of exam items to compute percentages.";
+      els.statsRow.style.display = "none";
+      els.chartsRow.style.display = "none";
+      els.breakdownCard.style.display = "none";
+      els.warn.style.display = warnMsgs.length ? "" : "none";
+      els.warn.textContent = warnMsgs.join(" ");
+      clearReport();
+      reportReady = false;
+      return;
+    }
+
+    var orig = computeDist(scores, total, 0);
+    var curved = computeDist(scores, total, curve);
+    var hasCurve = curve !== 0;
+
+    // shared y-axis so the two charts are directly comparable
+    var maxShare = 0;
+    GRADES.forEach(function (g) { maxShare = Math.max(maxShare, orig.share[g], curved.share[g]); });
+    var yMax = niceCeil(maxShare);
+
+    // stats
+    els.empty.style.display = "none";
+    els.statsRow.style.display = "";
+    els.chartsRow.style.display = "";
+    els.breakdownCard.style.display = "";
+    els.stN.textContent = orig.n;
+    els.stMedRaw.textContent = fmtPct(orig.median);
+    els.stMedCurved.textContent = fmtPct(curved.median);
+    els.stMeanCurved.textContent = fmtPct(curved.mean);
+
+    els.subOriginal.textContent = "n = " + orig.n + " · median " + fmtPct(orig.median);
+    els.subCurved.textContent = hasCurve
+      ? "curve " + curveSign + fmtNum(curve) + " pt" + (Math.abs(curve) === 1 ? "" : "s") + " · median " + fmtPct(curved.median)
+      : "no curve applied · median " + fmtPct(curved.median);
+
+    drawChart(els.chartOriginal, orig, { hue: "var(--series-original)", yMax: yMax });
+    drawChart(els.chartCurved, curved, { hue: "var(--series-curved)", yMax: yMax });
+
+    renderBreakdown(orig, curved, hasCurve);
+
+    els.warn.style.display = warnMsgs.length ? "" : "none";
+    els.warn.textContent = warnMsgs.join(" ");
+
+    updateReport(curved, curve, hasCurve, yMax);
+    reportReady = true;
+  }
+
+  // Empty the print-only report so a not-ready state never prints stale data.
+  function clearReport() {
+    els.rTitle.textContent = "";
+    els.rMeta.innerHTML = "";
+    els.rStats.innerHTML = "";
+    els.rChart.innerHTML = "";
+    els.rFoot.textContent = "";
+  }
+
+  function renderBreakdown(orig, curved, hasCurve) {
+    var cap = "<caption class='sr-only'>Grade counts and percentages" + (hasCurve ? ", original and curved" : "") + "</caption>";
+    var head = "<thead><tr><th>Grade</th><th>Students</th><th>Percent</th>" +
+      (hasCurve ? "<th>Curved students</th><th>Curved percent</th>" : "") + "</tr></thead>";
+    var body = "<tbody>";
+    for (var i = GRADES.length - 1; i >= 0; i--) { // A first, F last
+      var g = GRADES[i];
+      body += "<tr><td><span class='swatch' style='background:var(--series-original)' aria-hidden='true'></span>" + g + "</td>" +
+        "<td>" + orig.counts[g] + "</td><td>" + fmtPct(orig.share[g]) + "</td>";
+      if (hasCurve) body += "<td>" + curved.counts[g] + "</td><td>" + fmtPct(curved.share[g]) + "</td>";
+      body += "</tr>";
+    }
+    body += "</tbody>";
+    var foot = "<tfoot><tr><td>Total</td><td>" + orig.n + "</td><td>100%</td>" +
+      (hasCurve ? "<td>" + curved.n + "</td><td>100%</td>" : "") + "</tr></tfoot>";
+    els.breakdownTable.innerHTML = cap + head + body + foot;
+  }
+
+  // ---------------------------------------------------------------- print report
+  function updateReport(curved, curve, hasCurve, yMax) {
+    var course = els.course.value.trim();
+    var exam = els.exam.value.trim();
+    var dateStr = prettyDate(els.date.value);
+
+    var titleMain = (exam ? exam + " " : "") + "Distribution";
+    els.rTitle.textContent = titleMain;
+
+    var metaBits = [];
+    if (course) metaBits.push('<span>' + esc(course) + '</span>');
+    if (dateStr) metaBits.push('<span>' + esc(dateStr) + '</span>');
+    els.rMeta.innerHTML = metaBits.join('<span class="dot">•</span>');
+
+    // The printed report intentionally omits any mention of the curve.
+    var stats = '<div class="r-stat"><div class="k">Median</div>' +
+                '<div class="v">' + fmtPct(curved.median) + '</div></div>';
+    stats += '<div class="r-stat sub"><div class="k">Students</div><div class="v">' + curved.n + '</div></div>';
+    els.rStats.innerHTML = stats;
+
+    drawChart(els.rChart, curved, { hue: "#2a78d6", yMax: yMax, forPrint: true });
+
+    els.rFoot.textContent = "Grade scale: A ≥ 90% · B 80–89% · C 70–79% · D 60–69% · F < 60%";
+  }
+
+  // ---------------------------------------------------------------- example / clear
+  var EXAMPLE = [38,42,29,45,33,40,44,36,47,41,35,39,43,31,46,37,40,34,48,42,
+                 30,44,39,36,41,45,33,38,47,35,42,40,28,43,37,44,39,46,34,41];
+  els.total.addEventListener("focus", function () { /* no-op, keeps parity */ });
+  $("exampleBtn").addEventListener("click", function () {
+    els.course.value = els.course.value || "CHEM 101";
+    els.exam.value = els.exam.value || "Exam 3";
+    els.total.value = els.total.value || "50";
+    els.scores.value = EXAMPLE.join("\n");
+    render();
+  });
+  $("clearBtn").addEventListener("click", function () {
+    els.scores.value = ""; render();
+  });
+
+  // ---------------------------------------------------------------- print
+  $("printBtn").addEventListener("click", function () {
+    // ensure the report reflects the latest inputs, then print
+    render();
+    if (!reportReady) {
+      alert("Enter the total exam items and paste scores before printing.");
+      els.scores.focus();
+      return;
+    }
+    window.print();
+  });
+
+  // ---------------------------------------------------------------- wire up
+  ["input", "change"].forEach(function (ev) {
+    els.controls = $("controls");
+    ["course", "exam", "date", "total", "curve", "scores"].forEach(function (k) {
+      els[k].addEventListener(ev, render);
+    });
+  });
+
+  // init
+  els.date.value = todayISO();
+  render();
+})();
+</script>
+</body>
+</html>
