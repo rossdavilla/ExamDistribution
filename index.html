@@ -175,6 +175,83 @@
   .breakdown tfoot td { font-weight: 650; border-bottom: none; }
   .swatch { display: inline-block; width: 10px; height: 10px; border-radius: 2px; margin-right: 7px; vertical-align: middle; }
 
+  [hidden] { display: none !important; }
+
+  /* ---------- Canvas import ---------- */
+  .import {
+    background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 18px 20px; margin-bottom: 24px;
+  }
+  .import-head {
+    display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between;
+    gap: 4px 16px; margin-bottom: 12px;
+  }
+  .import-head h2 { font-size: 15px; font-weight: 640; margin: 0; }
+  .import-head p { margin: 0; font-size: 12.5px; color: var(--text-secondary); }
+  .drops { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  @media (max-width: 700px) { .drops { grid-template-columns: 1fr; } }
+  .drop {
+    position: relative; display: flex; align-items: center; gap: 12px; min-width: 0;
+    border: 1.5px dashed var(--border-strong); border-radius: 10px; padding: 12px 14px;
+    background: var(--surface-1); cursor: pointer;
+    transition: border-color .12s, background .12s;
+  }
+  .drop:hover, .drop.over {
+    border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface-1));
+  }
+  .drop:focus-within {
+    border-color: var(--accent); box-shadow: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
+  }
+  .drop.done { border-style: solid; border-color: color-mix(in srgb, var(--series-curved) 60%, transparent); }
+  .drop input[type="file"] { position: absolute; inset: 0; width: 100%; opacity: 0; cursor: pointer; }
+  .drop .step {
+    flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+    font-size: 12.5px; font-weight: 650; color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 12%, transparent);
+  }
+  .drop.done .step { color: #fff; background: var(--series-curved); }
+  .drop .txt { min-width: 0; }
+  .drop .t1 { display: block; font-size: 13.5px; font-weight: 600; }
+  .drop .t2 {
+    display: block; font-size: 12px; color: var(--muted);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .import-opts {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 10px 20px;
+    margin-top: 14px; font-size: 13px;
+  }
+  .import-opts label { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin-right: 8px; }
+  select {
+    font: inherit; font-size: 13px; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border-strong); border-radius: 8px; padding: 6px 8px; max-width: 100%;
+  }
+  .import-summary { color: var(--text-secondary); }
+  .import-summary strong { color: var(--text-primary); font-weight: 650; }
+  .import-note { font-size: 12px; color: var(--muted); }
+
+  /* Downloads */
+  .downloads { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
+  .downloads h3 { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
+  button.secondary {
+    font: inherit; color: var(--text-primary); background: var(--surface-1);
+    border: 1px solid var(--border-strong); border-radius: 9px; padding: 9px 12px; cursor: pointer;
+    width: 100%; display: flex; align-items: center; gap: 10px; text-align: left; margin-bottom: 8px;
+    transition: border-color .12s;
+  }
+  button.secondary:hover:not(:disabled) { border-color: var(--accent); }
+  button.secondary:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+  button.secondary:disabled { opacity: .55; cursor: not-allowed; }
+  button.secondary svg { flex: 0 0 16px; width: 16px; height: 16px; color: var(--accent); }
+  button.secondary .dl-t { display: block; font-size: 13.5px; font-weight: 600; }
+  button.secondary .dl-name { display: block; font-size: 11.5px; color: var(--muted); word-break: break-word; }
+
+  /* Student roster */
+  details.chartcard summary { cursor: pointer; font-size: 15px; font-weight: 640; }
+  details.chartcard summary .sub { font-weight: 400; margin-left: 6px; }
+  .roster-wrap { max-height: 460px; overflow: auto; margin-top: 8px; }
+  .roster thead th { position: sticky; top: 0; background: var(--surface-1); }
+  .roster td.none { color: var(--muted); }
+
   /* ---------- Tooltip ---------- */
   .tooltip {
     position: fixed; pointer-events: none; z-index: 50;
@@ -219,15 +296,53 @@
 <div class="app">
   <header class="masthead">
     <h1>Exam Grade Distribution</h1>
-    <p>Paste raw scores, see the grade breakdown, apply a curve, and print a clean report to PDF.</p>
+    <p>Import Canvas exam scores (or paste raw scores), see the grade breakdown, apply a curve, and export files for Canvas or a PDF report.</p>
   </header>
+
+  <!-- ============ CANVAS IMPORT ============ -->
+  <section class="import" id="importCard" aria-labelledby="importTitle">
+    <div class="import-head">
+      <h2 id="importTitle">Import from Canvas</h2>
+      <p>Drop in both files (.csv or .xlsx). Files are processed in your browser and never uploaded.</p>
+    </div>
+    <div class="drops">
+      <label class="drop" id="dropExam">
+        <input type="file" id="fileExam" accept=".csv,.xlsx,.xls" />
+        <span class="step" aria-hidden="true">1</span>
+        <span class="txt">
+          <span class="t1">Exam scores</span>
+          <span class="t2" id="nameExam">Quiz student analysis export</span>
+        </span>
+      </label>
+      <label class="drop" id="dropGradebook">
+        <input type="file" id="fileGradebook" accept=".csv,.xlsx,.xls" />
+        <span class="step" aria-hidden="true">2</span>
+        <span class="txt">
+          <span class="t1">Canvas gradebook</span>
+          <span class="t2" id="nameGradebook">Gradebook export</span>
+        </span>
+      </label>
+    </div>
+    <div class="import-opts" id="importOpts" hidden>
+      <span id="examColWrap" hidden><label for="examCol">Gradebook column</label><select id="examCol"></select></span>
+      <span class="import-summary" id="importSummary" aria-live="polite"></span>
+      <button type="button" class="linkbtn" id="clearImportBtn">Clear import</button>
+    </div>
+    <div class="warn" id="importWarn" role="status" aria-live="polite"></div>
+  </section>
 
   <div class="grid">
     <!-- ============ CONTROLS ============ -->
     <form class="panel" id="controls" autocomplete="off" onsubmit="return false">
-      <div class="field">
-        <label for="course">Course number</label>
-        <input type="text" id="course" placeholder="e.g. CHEM 101" />
+      <div class="row2">
+        <div class="field">
+          <label for="course">Course number</label>
+          <input type="text" id="course" placeholder="e.g. PSY157" />
+        </div>
+        <div class="field">
+          <label for="term">Term</label>
+          <input type="text" id="term" placeholder="e.g. 2026 Fall" />
+        </div>
       </div>
 
       <div class="row2">
@@ -259,10 +374,27 @@
         <div class="btnrow">
           <button type="button" class="linkbtn" id="exampleBtn">Load example</button>
           <button type="button" class="linkbtn" id="clearBtn">Clear</button>
+          <span class="import-note" id="scoresNote" hidden></span>
         </div>
       </div>
 
       <div class="warn" id="warn" role="status" aria-live="polite"></div>
+
+      <div class="downloads">
+        <h3>Files for Canvas</h3>
+        <button type="button" class="secondary" id="xlsxBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          <span><span class="dl-t">Download scores (.xlsx)</span><span class="dl-name" id="xlsxName">Import both files to enable</span></span>
+        </button>
+        <button type="button" class="secondary" id="csvBtn" disabled>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="M7 10l5 5 5-5"/><path d="M12 15V3"/></svg>
+          <span><span class="dl-t">Download gradebook import (.csv)</span><span class="dl-name" id="csvName">Import both files to enable</span></span>
+        </button>
+        <button type="button" class="secondary" id="emailBtn" hidden>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M22 6l-10 7L2 6"/></svg>
+          <span><span class="dl-t">Copy missed-exam emails</span><span class="dl-name" id="emailName" aria-live="polite"></span></span>
+        </button>
+      </div>
 
       <div class="field" style="margin-top:18px">
         <button type="button" class="primary" id="printBtn">
@@ -301,6 +433,11 @@
         <h2 style="margin-bottom:8px">Grade breakdown</h2>
         <table class="breakdown" id="breakdownTable"></table>
       </div>
+
+      <details class="chartcard" id="rosterCard" style="display:none">
+        <summary>Students <span class="sub" id="rosterSub"></span></summary>
+        <div class="roster-wrap"><table class="breakdown roster" id="rosterTable"></table></div>
+      </details>
     </section>
   </div>
 </div>
@@ -318,6 +455,8 @@
 
 <div class="tooltip" id="tooltip"></div>
 
+<!-- SheetJS Community Edition 0.20.3 (Apache-2.0, see vendor/SHEETJS-LICENSE): reads and writes .xlsx -->
+<script src="vendor/xlsx.mini.min.js"></script>
 <script>
 "use strict";
 (function () {
@@ -328,8 +467,17 @@
   // ---------------------------------------------------------------- elements
   var $ = function (id) { return document.getElementById(id); };
   var els = {
-    course: $("course"), exam: $("exam"), date: $("date"),
+    course: $("course"), term: $("term"), exam: $("exam"), date: $("date"),
     total: $("total"), curve: $("curve"), scores: $("scores"),
+    exampleBtn: $("exampleBtn"), clearBtn: $("clearBtn"), scoresNote: $("scoresNote"),
+    fileExam: $("fileExam"), fileGradebook: $("fileGradebook"),
+    dropExam: $("dropExam"), dropGradebook: $("dropGradebook"),
+    nameExam: $("nameExam"), nameGradebook: $("nameGradebook"),
+    importOpts: $("importOpts"), examColWrap: $("examColWrap"), examCol: $("examCol"),
+    importSummary: $("importSummary"), importWarn: $("importWarn"), clearImportBtn: $("clearImportBtn"),
+    xlsxBtn: $("xlsxBtn"), csvBtn: $("csvBtn"), xlsxName: $("xlsxName"), csvName: $("csvName"),
+    emailBtn: $("emailBtn"), emailName: $("emailName"),
+    rosterCard: $("rosterCard"), rosterSub: $("rosterSub"), rosterTable: $("rosterTable"),
     curveEffect: $("curveEffect"), warn: $("warn"),
     empty: $("empty"), statsRow: $("statsRow"), chartsRow: $("chartsRow"),
     breakdownCard: $("breakdownCard"), breakdownTable: $("breakdownTable"),
@@ -567,6 +715,7 @@
     var curveSign = curve < 0 ? "" : "+";   // fmtNum already prints the minus for negatives
     var parsed = parseScores(els.scores.value);
     var scores = parsed.vals;
+    updateCanvas(total, curve);
 
     // curve effect note
     if (isFinite(total) && total > 0 && curve) {
@@ -691,6 +840,461 @@
     els.rFoot.textContent = "Grade scale: A ≥ 90% · B 80–89% · C 70–79% · D 60–69% · F < 60%";
   }
 
+  // ---------------------------------------------------------------- Canvas import
+  // imp.exam: parsed exam-scores export · imp.gradebook: parsed gradebook export ·
+  // imp.merged: gradebook students paired with their raw exam scores (needs both).
+  var imp = { exam: null, gradebook: null, merged: null };
+  var TERM_SEASONS = { "10": "Spring", "20": "Summer", "30": "Fall" };  // section_sis_id 202630-… = 2026 Fall
+  var NOT_COURSE = /^(exam|quiz|test|midterm|final|week|chapter|unit|part|report|lecture|section|grades)$/i;
+  var XLSX_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+  var EMAIL_DOMAIN = "@ucmerced.edu";   // SIS Login ID + domain = student email
+
+  function norm(s) { return String(s == null ? "" : s).trim().toLowerCase(); }
+  function cell(row, c) { return c < 0 || row[c] == null ? "" : String(row[c]).trim(); }
+  function toNum(v) { var t = String(v == null ? "" : v).trim(); return t === "" ? NaN : Number(t); }
+  function round2(x) { return Math.round(x * 100) / 100; }
+  function tally(counts, key) { counts[key] = (counts[key] || 0) + 1; }
+  function mostCommon(counts) {
+    var best = "", n = 0;
+    for (var k in counts) if (counts[k] > n) { best = k; n = counts[k]; }
+    return best;
+  }
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+
+  // RFC 4180 CSV: quoted fields may hold commas, doubled quotes, and line breaks
+  // (Canvas question text often contains all three).
+  function parseCSV(text) {
+    if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+    var rows = [], row = [], field = "", quoted = false;
+    for (var i = 0; i < text.length; i++) {
+      var ch = text[i];
+      if (quoted) {
+        if (ch !== '"') field += ch;
+        else if (text[i + 1] === '"') { field += '"'; i++; }
+        else quoted = false;
+      } else if (ch === '"') quoted = true;
+      else if (ch === ",") { row.push(field); field = ""; }
+      else if (ch === "\n" || ch === "\r") {
+        if (ch === "\r" && text[i + 1] === "\n") i++;
+        row.push(field); rows.push(row); row = []; field = "";
+      } else field += ch;
+    }
+    if (field !== "" || row.length) { row.push(field); rows.push(row); }
+    return rows.filter(function (r) { return r.some(function (v) { return v.trim() !== ""; }); });
+  }
+
+  // Read a .csv or .xlsx file into rows of strings.
+  function readTable(file) {
+    return new Promise(function (resolve, reject) {
+      var isCSV = !/\.xlsx?$/i.test(file.name);
+      var reader = new FileReader();
+      reader.onerror = function () { reject(new Error("Couldn't read " + file.name + ".")); };
+      reader.onload = function () {
+        try {
+          if (isCSV) { resolve(parseCSV(reader.result)); return; }
+          if (!window.XLSX) throw new Error("The spreadsheet library didn't load, so .xlsx files can't be read. Save " + file.name + " as .csv and try again.");
+          var wb = XLSX.read(reader.result, { type: "array" });
+          var rows = XLSX.utils.sheet_to_json(wb.Sheets[wb.SheetNames[0]], { header: 1, raw: false, defval: "", blankrows: false });
+          resolve(rows.map(function (r) { return r.map(String); }));
+        } catch (err) { reject(err); }
+      };
+      if (isCSV) reader.readAsText(file); else reader.readAsArrayBuffer(file);
+    });
+  }
+
+  function detectKind(rows) {
+    var h = (rows[0] || []).map(norm);
+    if (h[0] === "student" && h.indexOf("id") >= 0) return "gradebook";
+    if (h.indexOf("score") >= 0 && (h.indexOf("sis_id") >= 0 || h.indexOf("id") >= 0)) return "exam";
+    return "";
+  }
+
+  // "2026-09-14T1646_Grades-PSY_157_….csv" or "PSY157-Exam-Scores.csv" -> "PSY157"
+  function courseFromName(fileName) {
+    var base = String(fileName).replace(/\.[^.]*$/, "");
+    var m = /Grades-([A-Za-z]{2,6})[ _-]?(\d{2,4}[A-Za-z]?)(?![0-9])/i.exec(base);
+    if (m) return (m[1] + m[2]).toUpperCase();
+    var re = /(?:^|[^A-Za-z])([A-Za-z]{2,6})[ _-]?(\d{2,4}[A-Za-z]?)(?![0-9])/g;
+    while ((m = re.exec(base))) if (!NOT_COURSE.test(m[1])) return (m[1] + m[2]).toUpperCase();
+    return "";
+  }
+
+  // "2026-09-15 00:56:30 UTC" -> the local calendar date, e.g. "2026-09-14" in California
+  function localDay(s) {
+    var m = /^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::(\d{2}))?\s*(UTC|Z)?/i.exec(String(s).trim());
+    if (!m) return "";
+    var p = [+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +(m[6] || 0)];
+    var d = m[7] ? new Date(Date.UTC(p[0], p[1], p[2], p[3], p[4], p[5])) : new Date(p[0], p[1], p[2], p[3], p[4], p[5]);
+    if (isNaN(d.getTime())) return "";
+    return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0");
+  }
+
+  // Canvas quiz "Student Analysis" export: one row per student, question columns,
+  // then "n correct", "n incorrect", "score".
+  function parseExam(rows, fileName) {
+    var h = rows[0].map(norm);
+    var cId = h.indexOf("id"), cSis = h.indexOf("sis_id"), cName = h.indexOf("name"),
+        cScore = h.lastIndexOf("score"), cAttempt = h.indexOf("attempt"), cSubmitted = h.indexOf("submitted"),
+        cSection = h.indexOf("section_sis_id"), cRight = h.indexOf("n correct"), cWrong = h.indexOf("n incorrect");
+    if (cScore < 0 || (cId < 0 && cSis < 0)) {
+      throw new Error(fileName + " doesn't look like a Canvas exam scores export (it needs id and score columns).");
+    }
+    var byKey = {}, keys = [], terms = {}, days = {}, itemCounts = {};
+    for (var i = 1; i < rows.length; i++) {
+      var r = rows[i];
+      var rec = { id: cell(r, cId), sisId: cell(r, cSis), name: cell(r, cName),
+                  score: toNum(r[cScore]), attempt: toNum(r[cAttempt]) || 0 };
+      if (!rec.id && !rec.sisId) continue;
+      var key = rec.id || "sis:" + rec.sisId;
+      if (!byKey[key]) keys.push(key);
+      if (!byKey[key] || rec.attempt >= byKey[key].attempt) byKey[key] = rec;   // keep the latest attempt
+      var t = /^(\d{4})(\d{2})/.exec(cell(r, cSection));
+      if (t) tally(terms, t[1] + t[2]);
+      var day = localDay(cell(r, cSubmitted));
+      if (day) tally(days, day);
+      var items = toNum(r[cRight]) + toNum(r[cWrong]);
+      if (items > 0) tally(itemCounts, items);
+    }
+    if (!keys.length) throw new Error(fileName + " has no student rows.");
+    // Question columns are headed "<question id>: <question text>".
+    var questions = rows[0].filter(function (v) { return /^\s*\d+:/.test(v); }).length;
+    var term = mostCommon(terms), season = TERM_SEASONS[term.slice(4)];
+    return {
+      fileName: fileName,
+      records: keys.map(function (k) { return byKey[k]; }),
+      total: questions || +mostCommon(itemCounts) || 0,
+      term: season ? term.slice(0, 4) + " " + season : "",
+      date: mostCommon(days),
+      course: courseFromName(fileName)
+    };
+  }
+
+  // Canvas gradebook export: Student, ID, SIS User ID, SIS Login ID, Section, then
+  // assignment columns, then read-only totals. Row 2 is "Points Possible".
+  function parseGradebook(rows, fileName) {
+    var header = rows[0].map(function (v) { return String(v).trim(); });
+    var h = header.map(norm);
+    var cId = h.indexOf("id");
+    if (h[0] !== "student" || cId < 0) {
+      throw new Error(fileName + " doesn't look like a Canvas gradebook export (it needs Student and ID columns).");
+    }
+    var pointsRow = null, students = [];
+    for (var i = 1; i < rows.length; i++) {
+      if (norm(rows[i][0]) === "points possible") pointsRow = rows[i];
+      else students.push(rows[i]);
+    }
+    var nIdentity = h.indexOf("section") + 1 || Math.min(5, header.length);
+    var columns = [];
+    for (var c = nIdentity; c < header.length; c++) {
+      var pts = pointsRow ? cell(pointsRow, c) : "";
+      // Read-only total columns say "(read only)" instead of a point value.
+      var gradable = pointsRow ? pts !== "" && isFinite(Number(pts)) : !/(score|grade)$/i.test(header[c]);
+      if (!gradable) continue;
+      var filled = 0;
+      for (var j = 0; j < students.length; j++) if (cell(students[j], c) !== "") filled++;
+      columns.push({ index: c, header: header[c], filled: filled });
+    }
+    if (!columns.length) throw new Error(fileName + " has no assignment columns to put exam scores in.");
+    // Default: the first empty exam column, else the first empty column, else the first column.
+    var pick = columns.filter(function (col) { return !col.filled && /exam|midterm|final/i.test(col.header); })[0] ||
+               columns.filter(function (col) { return !col.filled; })[0] || columns[0];
+    return {
+      fileName: fileName, header: header, nIdentity: nIdentity, cId: cId, cSis: h.indexOf("sis user id"),
+      cLogin: h.indexOf("sis login id"),
+      pointsLabel: pointsRow ? String(pointsRow[0]) : "    Points Possible",
+      students: students, columns: columns, defaultColumn: pick.index,
+      course: courseFromName(fileName)
+    };
+  }
+
+  // Pair each gradebook student with their exam score (by Canvas ID, then SIS ID),
+  // sorted highest raw score first; students without a score go last.
+  function mergeScores(ex, gb, col) {
+    var byId = {}, bySis = {}, used = {};
+    ex.records.forEach(function (r) { if (r.id) byId[r.id] = r; if (r.sisId) bySis[r.sisId] = r; });
+    var rows = gb.students.map(function (s, i) {
+      var rec = byId[cell(s, gb.cId)] || bySis[cell(s, gb.cSis)] || null;
+      if (rec) used[rec.id + "|" + rec.sisId] = true;
+      var identity = [];
+      for (var c = 0; c < gb.nIdentity; c++) identity.push(cell(s, c));
+      var login = cell(s, gb.cLogin);
+      return {
+        i: i, name: identity[0], identity: identity, raw: rec && isFinite(rec.score) ? rec.score : null,
+        email: !login ? "" : login.indexOf("@") >= 0 ? login : login + EMAIL_DOMAIN
+      };
+    });
+    rows.sort(function (a, b) {
+      if (a.raw === null || b.raw === null) return (a.raw === null) - (b.raw === null) || a.i - b.i;
+      return b.raw - a.raw || a.i - b.i;
+    });
+    return {
+      rows: rows, col: col, colHeader: gb.header[col],
+      identityHeader: gb.header.slice(0, gb.nIdentity), pointsLabel: gb.pointsLabel,
+      unmatched: ex.records.filter(function (r) { return !used[r.id + "|" + r.sisId]; })
+                           .map(function (r) { return r.name || r.id || r.sisId; })
+    };
+  }
+
+  function examName(header) { return String(header).replace(/\s*\(\d+\)\s*$/, ""); }
+
+  function showImportWarn(text) {
+    els.importWarn.textContent = text;
+    els.importWarn.style.display = text ? "" : "none";
+  }
+
+  function handleFiles(fileList, slot) {
+    Array.prototype.forEach.call(fileList, function (file) {
+      readTable(file).then(function (rows) {
+        if (!rows.length) throw new Error(file.name + " is empty.");
+        var kind = detectKind(rows) || slot;       // a file dropped in the wrong box still lands right
+        if (kind === "exam") imp.exam = parseExam(rows, file.name);
+        else imp.gradebook = parseGradebook(rows, file.name);
+        applyImport(kind);
+      }).catch(function (err) {
+        showImportWarn(err && err.message ? err.message : "Couldn't import " + file.name + ".");
+      });
+    });
+  }
+
+  // Fill the form from a newly imported file.
+  function applyImport(kind) {
+    var ex = imp.exam, gb = imp.gradebook;
+    if (kind === "exam") {
+      if (ex.total) els.total.value = ex.total;
+      if (ex.date) els.date.value = ex.date;
+      if (ex.term) els.term.value = ex.term;
+    } else {
+      els.examCol.innerHTML = gb.columns.map(function (col) {
+        return '<option value="' + col.index + '"' + (col.index === gb.defaultColumn ? " selected" : "") + ">" +
+          esc(col.header) + (col.filled ? " (has " + plural(col.filled, "score") + ")" : "") + "</option>";
+      }).join("");
+      els.exam.value = examName(gb.header[gb.defaultColumn]);
+    }
+    var course = (gb && gb.course) || (ex && ex.course);
+    if (course) els.course.value = course;
+    refreshImport();
+  }
+
+  function refreshImport() {
+    var ex = imp.exam, gb = imp.gradebook;
+    var m = imp.merged = ex && gb ? mergeScores(ex, gb, +els.examCol.value) : null;
+
+    els.dropExam.classList.toggle("done", !!ex);
+    els.nameExam.textContent = ex ? ex.fileName : "Quiz student analysis export";
+    els.dropGradebook.classList.toggle("done", !!gb);
+    els.nameGradebook.textContent = gb ? gb.fileName : "Gradebook export";
+    els.importOpts.hidden = !(ex || gb);
+    els.examColWrap.hidden = !gb;
+
+    var scores = null, summary = "", notes = [];
+    if (m) {
+      scores = m.rows.filter(function (r) { return r.raw !== null; }).map(function (r) { return r.raw; });
+      var blank = m.rows.length - scores.length;
+      summary = "<strong>" + scores.length + "</strong> of " + plural(m.rows.length, "student") + " have a score" +
+        (blank ? " · " + blank + " without one will be left blank" : "");
+      if (m.unmatched.length) {
+        notes.push(plural(m.unmatched.length, "student") + " in the exam file " + (m.unmatched.length === 1 ? "isn't" : "aren't") +
+          " in the gradebook and will be left out: " + m.unmatched.join("; ") + ".");
+      }
+      var col = gb.columns.filter(function (c) { return c.index === m.col; })[0];
+      if (col && col.filled) {
+        notes.push("“" + col.header + "” already has " + plural(col.filled, "score") + " in the gradebook; importing the CSV will replace them.");
+      }
+    } else if (ex) {
+      scores = ex.records.filter(function (r) { return isFinite(r.score); }).map(function (r) { return r.score; });
+      summary = "<strong>" + scores.length + "</strong> exam scores loaded · add the gradebook to enable downloads";
+    } else if (gb) {
+      summary = "Gradebook loaded (" + plural(gb.students.length, "student") + ") · add the exam scores";
+    }
+    els.importSummary.innerHTML = summary;
+    showImportWarn(notes.join(" "));
+    updateEmailBtn();
+
+    // While scores come from a file, the textarea mirrors it instead of taking edits.
+    if (scores) els.scores.value = scores.join("\n");
+    els.scores.readOnly = !!scores;
+    els.exampleBtn.hidden = els.clearBtn.hidden = !!scores;
+    els.scoresNote.hidden = !scores;
+    els.scoresNote.textContent = scores ? "Filled from the exam file" : "";
+    render();
+  }
+
+  // ---------------------------------------------------------------- Canvas export
+  // Curved raw score: add the curve, never above the item total or below zero.
+  function curvedOf(raw, total, curve) {
+    return curve > 0 ? Math.min(raw + curve, total) : curve < 0 ? Math.max(raw + curve, 0) : raw;
+  }
+  function curveFormula(ref, total, curve) {
+    return curve > 0 ? "MIN(" + ref + "+" + curve + "," + total + ")" : curve < 0 ? "MAX(" + ref + curve + ",0)" : ref;
+  }
+
+  // "PSY157 (2026 Fall) - Exam 1"
+  function baseFileName() {
+    var course = els.course.value.trim(), term = els.term.value.trim(), exam = els.exam.value.trim() || "Exam";
+    return ((course ? course + (term ? " (" + term + ")" : "") + " - " : "") + exam).replace(/[\\\/:*?"<>|]+/g, "-");
+  }
+
+  // Canvas IDs are whole numbers; keep them numeric like Excel does, but never mangle
+  // anything with a leading zero or too many digits.
+  function typedCell(v) {
+    if (v === "") return null;
+    return /^[1-9]\d{0,14}$/.test(v) ? { t: "n", v: Number(v) } : { t: "s", v: v };
+  }
+
+  // Identity columns, then the exam column three times: raw score, curved score,
+  // final percentage. Row 2 holds item total, "Curve +N", and 100.
+  function buildXlsx(m, total, curve) {
+    var ws = {}, k = m.identityHeader.length, enc = XLSX.utils.encode_cell;
+    function put(r, c, obj) { if (obj) ws[enc({ r: r, c: c })] = obj; }
+    var header = m.identityHeader.concat([m.colHeader, m.colHeader, m.colHeader]);
+    header.forEach(function (v, c) { put(0, c, { t: "s", v: v }); });
+    put(1, 0, { t: "s", v: m.pointsLabel });
+    put(1, k, { t: "n", v: total });
+    put(1, k + 1, { t: "s", v: "Curve " + (curve < 0 ? "" : "+") + curve });
+    put(1, k + 2, { t: "n", v: 100 });
+    m.rows.forEach(function (row, i) {
+      var r = i + 2;
+      row.identity.forEach(function (v, c) { put(r, c, typedCell(v)); });
+      if (row.raw === null) return;
+      var rawRef = XLSX.utils.encode_col(k) + (r + 1), curvedRef = XLSX.utils.encode_col(k + 1) + (r + 1);
+      var curved = curvedOf(row.raw, total, curve);
+      put(r, k, { t: "n", v: row.raw });
+      put(r, k + 1, { t: "n", v: curved, f: curveFormula(rawRef, total, curve) });
+      put(r, k + 2, { t: "n", v: curved / total * 100, f: curvedRef + "/" + total + "*100" });
+    });
+    ws["!ref"] = XLSX.utils.encode_range({ s: { r: 0, c: 0 }, e: { r: m.rows.length + 1, c: k + 2 } });
+    ws["!cols"] = header.map(function (_, c) { return { wch: c === 0 ? 26 : c < k ? 14 : 16 }; });
+    var sheetName = (els.course.value.trim() + " " + els.exam.value.trim()).replace(/[\[\]:*?\/\\]/g, "").trim().slice(0, 31);
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, sheetName || "Scores");
+    return XLSX.write(wb, { bookType: "xlsx", type: "array", compression: true });
+  }
+
+  // Same layout as a Canvas gradebook export, with only the final percentage.
+  function buildCsv(m, total, curve) {
+    function field(v) { v = String(v); return /[",\r\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v; }
+    var lines = [m.identityHeader.concat([m.colHeader])];
+    var points = [m.pointsLabel];
+    for (var c = 1; c < m.identityHeader.length; c++) points.push("");
+    lines.push(points.concat([100]));
+    m.rows.forEach(function (row) {
+      var pct = row.raw === null ? "" : round2(curvedOf(row.raw, total, curve) / total * 100);
+      lines.push(row.identity.concat([pct]));
+    });
+    return "﻿" + lines.map(function (l) { return l.map(field).join(","); }).join("\r\n") + "\r\n";
+  }
+
+  function saveFile(data, type, name) {
+    var url = URL.createObjectURL(new Blob([data], { type: type }));
+    var a = document.createElement("a");
+    a.href = url; a.download = name;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function () { URL.revokeObjectURL(url); }, 4000);
+  }
+
+  // Enable the downloads and fill the student table (called from render).
+  function updateCanvas(total, curve) {
+    var m = imp.merged, ok = !!m && isFinite(total) && total > 0;
+    var why = m ? "Enter the total exam items to enable" : "Import both files to enable";
+    var base = baseFileName();
+    els.xlsxBtn.disabled = els.csvBtn.disabled = !ok;
+    els.xlsxName.textContent = ok ? base + ".xlsx" : why;
+    els.csvName.textContent = ok ? base + " GB.csv" : why;
+
+    els.rosterCard.style.display = ok ? "" : "none";
+    if (!ok) return;
+    var scored = 0;
+    var body = m.rows.map(function (r) {
+      if (r.raw === null) {
+        return "<tr><td>" + esc(r.name) + "</td><td class='none' colspan='3'>No score (left blank)" +
+          (r.email ? " · " + esc(r.email) : "") + "</td></tr>";
+      }
+      scored++;
+      var curved = curvedOf(r.raw, total, curve);
+      return "<tr><td>" + esc(r.name) + "</td><td>" + round2(r.raw) + "</td><td>" + round2(curved) +
+        "</td><td>" + round2(curved / total * 100) + "%</td></tr>";
+    }).join("");
+    els.rosterSub.textContent = scored + " scored · " + (m.rows.length - scored) + " blank";
+    els.rosterTable.innerHTML = "<caption class='sr-only'>Raw, curved, and final exam score for each student</caption>" +
+      "<thead><tr><th>Student</th><th>Raw</th><th>Curved</th><th>Final</th></tr></thead><tbody>" + body + "</tbody>";
+  }
+
+  els.xlsxBtn.addEventListener("click", function () {
+    var total = parseInt(els.total.value, 10), curve = parseFloat(els.curve.value) || 0;
+    if (!imp.merged || !(total > 0)) return;
+    if (!window.XLSX) { alert("The spreadsheet library didn't load, so the .xlsx file can't be created."); return; }
+    saveFile(buildXlsx(imp.merged, total, curve), XLSX_TYPE, baseFileName() + ".xlsx");
+  });
+  els.csvBtn.addEventListener("click", function () {
+    var total = parseInt(els.total.value, 10), curve = parseFloat(els.curve.value) || 0;
+    if (!imp.merged || !(total > 0)) return;
+    saveFile(buildCsv(imp.merged, total, curve), "text/csv;charset=utf-8", baseFileName() + " GB.csv");
+  });
+
+  // ---------------------------------------------------------------- missed-exam emails
+  function addresses(n) { return n + (n === 1 ? " address" : " addresses"); }
+  function missedExam() {
+    return imp.merged ? imp.merged.rows.filter(function (r) { return r.raw === null; }) : [];
+  }
+  function updateEmailBtn() {
+    var missed = missedExam();
+    var noLogin = missed.filter(function (r) { return !r.email; }).length;
+    els.emailBtn.hidden = !missed.length;
+    els.emailName.textContent = missed.length
+      ? addresses(missed.length - noLogin) + (noLogin ? " (" + noLogin + " with no SIS Login ID)" : "")
+      : "";
+  }
+  function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) return navigator.clipboard.writeText(text);
+    return new Promise(function (resolve, reject) {   // fallback for file:// pages
+      var ta = document.createElement("textarea");
+      ta.value = text; ta.setAttribute("readonly", ""); ta.style.position = "fixed"; ta.style.opacity = "0";
+      document.body.appendChild(ta); ta.select();
+      var ok = document.execCommand("copy");
+      ta.remove();
+      if (ok) resolve(); else reject(new Error("copy failed"));
+    });
+  }
+  els.emailBtn.addEventListener("click", function () {
+    var emails = missedExam().map(function (r) { return r.email; }).filter(Boolean);
+    if (!emails.length) return;
+    var text = emails.join(", ");
+    copyText(text).then(function () {
+      els.emailName.textContent = "Copied " + addresses(emails.length) + " — paste into the To or Bcc field";
+    }, function () {
+      window.prompt("Copy these addresses:", text);
+    });
+  });
+
+  [["exam", els.fileExam, els.dropExam], ["gradebook", els.fileGradebook, els.dropGradebook]].forEach(function (s) {
+    var slot = s[0], input = s[1], zone = s[2];
+    input.addEventListener("change", function () {
+      var files = Array.prototype.slice.call(input.files);
+      input.value = "";                              // so picking the same file again still fires
+      handleFiles(files, slot);
+    });
+    zone.addEventListener("dragover", function (e) { e.preventDefault(); zone.classList.add("over"); });
+    zone.addEventListener("dragleave", function () { zone.classList.remove("over"); });
+    zone.addEventListener("drop", function (e) {
+      e.preventDefault(); zone.classList.remove("over");
+      handleFiles(e.dataTransfer.files, slot);
+    });
+  });
+  // A file dropped beside the boxes shouldn't navigate away from the page.
+  window.addEventListener("dragover", function (e) { e.preventDefault(); });
+  window.addEventListener("drop", function (e) { e.preventDefault(); });
+
+  els.examCol.addEventListener("change", function () {
+    els.exam.value = examName(imp.gradebook.header[+els.examCol.value]);
+    refreshImport();
+  });
+  els.clearImportBtn.addEventListener("click", function () {
+    imp.exam = imp.gradebook = imp.merged = null;
+    els.examCol.innerHTML = "";
+    els.scores.value = "";
+    refreshImport();
+  });
+
   // ---------------------------------------------------------------- example / clear
   var EXAMPLE = [38,42,29,45,33,40,44,36,47,41,35,39,43,31,46,37,40,34,48,42,
                  30,44,39,36,41,45,33,38,47,35,42,40,28,43,37,44,39,46,34,41];
@@ -721,7 +1325,7 @@
   // ---------------------------------------------------------------- wire up
   ["input", "change"].forEach(function (ev) {
     els.controls = $("controls");
-    ["course", "exam", "date", "total", "curve", "scores"].forEach(function (k) {
+    ["course", "term", "exam", "date", "total", "curve", "scores"].forEach(function (k) {
       els[k].addEventListener(ev, render);
     });
   });

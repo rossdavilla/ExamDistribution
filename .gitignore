@@ -3,3 +3,6 @@
 
 # Local Claude Code settings
 .claude/
+
+# De-identified sample files used for local testing (never publish)
+Examples/
