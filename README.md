@@ -33,6 +33,10 @@ are processed entirely in the browser and never uploaded.
 - **Curve** — enter the number of raw points to add to everyone's score; a curved
   distribution is shown next to the original on a **shared axis** for direct
   comparison. Curved scores are capped at 100%.
+- **Drop lowest scores** — one click leaves scores below a cutoff (40% of the
+  item total by default, editable) out of the charts, statistics, and PDF
+  report. Based on the raw score, so the curve never changes who is left out.
+  Those students still get their curved score in both Canvas downloads.
 - **Summary stats** — student count, raw median, curved median, and curved mean,
   plus a full grade-breakdown table.
 - **Print / Save as PDF** — a clean landscape report with the course number,
@@ -60,6 +64,7 @@ are processed entirely in the browser and never uploaded.
 | Date | Auto-filled to today; editable |
 | Total exam items | The maximum raw score (e.g. 50 questions) |
 | Curve | Raw points added to every score, capped at 100% |
+| Drop lowest scores | Leaves raw scores below the given percent out of the charts and stats only |
 | Raw scores | One score per line |
 
 ## Dependencies

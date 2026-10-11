@@ -229,6 +229,27 @@
   .import-summary strong { color: var(--text-primary); font-weight: 650; }
   .import-note { font-size: 12px; color: var(--muted); }
 
+  /* Drop-low-scores toggle */
+  .excl { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-top: 2px; }
+  button.toggle {
+    font: inherit; font-size: 13px; font-weight: 600; color: var(--text-primary);
+    background: var(--surface-1); border: 1px solid var(--border-strong); border-radius: 8px;
+    padding: 8px 11px; cursor: pointer; display: inline-flex; align-items: center; gap: 8px;
+    transition: border-color .12s, color .12s, background .12s;
+  }
+  button.toggle .dot {
+    width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--axis);
+    transition: background .12s, border-color .12s;
+  }
+  button.toggle[aria-pressed="true"] {
+    border-color: var(--accent); color: var(--accent);
+    background: color-mix(in srgb, var(--accent) 10%, var(--surface-1));
+  }
+  button.toggle[aria-pressed="true"] .dot { background: var(--accent); border-color: var(--accent); }
+  button.toggle:focus-visible { outline: 2px solid var(--text-primary); outline-offset: 2px; }
+  .excl-th { font-size: 12.5px; color: var(--text-secondary); display: inline-flex; align-items: center; gap: 6px; }
+  .excl-th input[type="number"] { width: 62px; padding: 6px 8px; }
+
   /* Downloads */
   .downloads { margin-top: 18px; padding-top: 16px; border-top: 1px solid var(--border); }
   .downloads h3 { font-size: 12.5px; font-weight: 600; color: var(--text-secondary); margin: 0 0 8px; }
@@ -368,6 +389,15 @@
       </div>
       <div class="curve-effect" id="curveEffect" aria-live="polite"></div>
 
+      <div class="excl">
+        <button type="button" class="toggle" id="excludeBtn" aria-pressed="false">
+          <span class="dot" aria-hidden="true"></span>Drop lowest scores
+        </button>
+        <span class="excl-th">below <input type="number" id="excludePct" min="0" max="100" step="1" value="40"
+          aria-label="Drop scores below this percent" /> %</span>
+      </div>
+      <div class="curve-effect" id="exclNote" aria-live="polite"></div>
+
       <div class="field">
         <label for="scores">Raw scores <span class="hint">(one per line — paste a column from Excel)</span></label>
         <textarea id="scores" placeholder="38&#10;42&#10;29&#10;45&#10;..."></textarea>
@@ -470,6 +500,7 @@
     course: $("course"), term: $("term"), exam: $("exam"), date: $("date"),
     total: $("total"), curve: $("curve"), scores: $("scores"),
     exampleBtn: $("exampleBtn"), clearBtn: $("clearBtn"), scoresNote: $("scoresNote"),
+    excludeBtn: $("excludeBtn"), excludePct: $("excludePct"), exclNote: $("exclNote"),
     fileExam: $("fileExam"), fileGradebook: $("fileGradebook"),
     dropExam: $("dropExam"), dropGradebook: $("dropGradebook"),
     nameExam: $("nameExam"), nameGradebook: $("nameGradebook"),
@@ -708,6 +739,16 @@
 
   // ---------------------------------------------------------------- render
   var reportReady = false;
+  // Scores this far below the item total are left out of the charts and statistics
+  // (never out of the Canvas files). Based on the raw score, so the curve doesn't
+  // change who is left out.
+  var excludeLow = false;
+  function excludeCutoff(total) {
+    if (!excludeLow || !isFinite(total) || total <= 0) return null;
+    var pct = parseFloat(els.excludePct.value);
+    return isFinite(pct) && pct > 0 ? total * pct / 100 : null;
+  }
+
   function render() {
     var total = parseInt(els.total.value, 10);
     var curve = parseFloat(els.curve.value);
@@ -716,6 +757,17 @@
     var parsed = parseScores(els.scores.value);
     var scores = parsed.vals;
     updateCanvas(total, curve);
+
+    var cutoff = excludeCutoff(total), dropped = 0;
+    if (cutoff !== null) {
+      var kept = scores.filter(function (s) { return s >= cutoff; });
+      dropped = scores.length - kept.length;
+      scores = kept;
+    }
+    els.exclNote.textContent = !excludeLow ? ""
+      : cutoff === null ? "Enter the total exam items and a percent to drop low scores."
+      : dropped + " score" + (dropped === 1 ? "" : "s") + " below " + fmtNum(cutoff) +
+        " left out of the charts and statistics · still in the Canvas files";
 
     // curve effect note
     if (isFinite(total) && total > 0 && curve) {
@@ -739,7 +791,9 @@
 
     if (!ready) {
       els.empty.style.display = "";
-      els.empty.textContent = !scores.length
+      els.empty.textContent = !scores.length && dropped
+        ? "Every score is below " + fmtNum(cutoff) + ", so nothing is left to chart."
+        : !scores.length
         ? "Enter the total exam items and paste your scores to see the distribution."
         : "Enter the total number of exam items to compute percentages.";
       els.statsRow.style.display = "none";
@@ -1203,7 +1257,7 @@
 
     els.rosterCard.style.display = ok ? "" : "none";
     if (!ok) return;
-    var scored = 0;
+    var cutoff = excludeCutoff(total), scored = 0;
     var body = m.rows.map(function (r) {
       if (r.raw === null) {
         return "<tr><td>" + esc(r.name) + "</td><td class='none' colspan='3'>No score (left blank)" +
@@ -1211,7 +1265,8 @@
       }
       scored++;
       var curved = curvedOf(r.raw, total, curve);
-      return "<tr><td>" + esc(r.name) + "</td><td>" + round2(r.raw) + "</td><td>" + round2(curved) +
+      var out = cutoff !== null && r.raw < cutoff ? " <span class='none'>· not in charts</span>" : "";
+      return "<tr><td>" + esc(r.name) + out + "</td><td>" + round2(r.raw) + "</td><td>" + round2(curved) +
         "</td><td>" + round2(curved / total * 100) + "%</td></tr>";
     }).join("");
     els.rosterSub.textContent = scored + " scored · " + (m.rows.length - scored) + " blank";
@@ -1255,6 +1310,12 @@
       if (ok) resolve(); else reject(new Error("copy failed"));
     });
   }
+  els.excludeBtn.addEventListener("click", function () {
+    excludeLow = !excludeLow;
+    els.excludeBtn.setAttribute("aria-pressed", excludeLow ? "true" : "false");
+    render();
+  });
+
   els.emailBtn.addEventListener("click", function () {
     var emails = missedExam().map(function (r) { return r.email; }).filter(Boolean);
     if (!emails.length) return;
@@ -1325,7 +1386,7 @@
   // ---------------------------------------------------------------- wire up
   ["input", "change"].forEach(function (ev) {
     els.controls = $("controls");
-    ["course", "term", "exam", "date", "total", "curve", "scores"].forEach(function (k) {
+    ["course", "term", "exam", "date", "total", "curve", "excludePct", "scores"].forEach(function (k) {
       els[k].addEventListener(ev, render);
     });
   });
