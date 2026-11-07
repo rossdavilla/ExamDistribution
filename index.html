@@ -670,12 +670,14 @@
         svg.push('<path class="bar" d="' + p + '" fill="' + hue + '" ' +
                  'data-g="' + g + '" data-count="' + count + '" data-share="' + share.toFixed(4) + '">' +
                  '<title>Grade ' + g + ': ' + count + (count === 1 ? " student" : " students") + ' (' + fmtPct(share) + ')</title></path>');
-        // cap label: number of students (always the true count, even for a tiny bar)
-        var ly = Math.min(bTop - 8, y1 - 8);
-        svg.push('<text x="' + cx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" ' +
-                 'font-size="13.5" font-weight="650" fill="' + ink + '" style="font-variant-numeric:tabular-nums">' + count + '</text>');
-      } else {
-        // zero-count grade: faint 0 on the baseline
+        // cap label: number of students (on screen only — the printed report omits counts)
+        if (!opts.forPrint) {
+          var ly = Math.min(bTop - 8, y1 - 8);
+          svg.push('<text x="' + cx.toFixed(1) + '" y="' + ly.toFixed(1) + '" text-anchor="middle" ' +
+                   'font-size="13.5" font-weight="650" fill="' + ink + '" style="font-variant-numeric:tabular-nums">' + count + '</text>');
+        }
+      } else if (!opts.forPrint) {
+        // zero-count grade: faint 0 on the baseline (screen only)
         svg.push('<text x="' + cx.toFixed(1) + '" y="' + (y1 - 6) + '" text-anchor="middle" font-size="12" fill="' + muted + '">0</text>');
       }
 
@@ -883,10 +885,10 @@
     if (dateStr) metaBits.push('<span>' + esc(dateStr) + '</span>');
     els.rMeta.innerHTML = metaBits.join('<span class="dot">•</span>');
 
-    // The printed report intentionally omits any mention of the curve.
+    // The printed report intentionally omits any mention of the curve or the
+    // number of students.
     var stats = '<div class="r-stat"><div class="k">Median</div>' +
                 '<div class="v">' + fmtPct(curved.median) + '</div></div>';
-    stats += '<div class="r-stat sub"><div class="k">Students</div><div class="v">' + curved.n + '</div></div>';
     els.rStats.innerHTML = stats;
 
     drawChart(els.rChart, curved, { hue: "#2a78d6", yMax: yMax, forPrint: true });
